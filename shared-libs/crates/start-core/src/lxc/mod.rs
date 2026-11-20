@@ -620,7 +620,16 @@ impl LxcContainer {
         minor: u32,
         mode: u32,
     ) -> Result<(), Error> {
-        Self::mknod_in(&**self.guid, self.rootfs_dir(), path, ty, major, minor, mode).await
+        Self::mknod_in(
+            &**self.guid,
+            self.rootfs_dir(),
+            path,
+            ty,
+            major,
+            minor,
+            mode,
+        )
+        .await
     }
 
     async fn mknod_in(
@@ -732,13 +741,7 @@ async fn sync_optical_drives(
     let added = desired.difference(applied).cloned().collect::<Vec<_>>();
     for node in added {
         if let Err(e) = LxcContainer::mknod_in(
-            guid,
-            rootfs,
-            &node.path,
-            node.ty,
-            node.major,
-            node.minor,
-            0o660,
+            guid, rootfs, &node.path, node.ty, node.major, node.minor, 0o660,
         )
         .await
         {
