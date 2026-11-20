@@ -44,6 +44,7 @@ export function setupManifest<
 }
 
 const sharedVolumeOsVersion = '0.4.3'
+const opticalDriveOsVersion = '0.4.3'
 
 function manifestOsVersion(manifest: SDKManifest): string {
   const required = manifest.sharedVolumes ? sharedVolumeOsVersion : OSVersion
@@ -54,6 +55,17 @@ function manifestOsVersion(manifest: SDKManifest): string {
       'less'
   ) {
     throw new Error(`Shared volumes require StartOS ${required} or later`)
+  }
+  // An older StartOS ignores the flag, so the service would install and silently get no drive.
+  if (
+    manifest.opticalDrives &&
+    StartOsVersion.parse(requested).compare(
+      StartOsVersion.parse(opticalDriveOsVersion),
+    ) === 'less'
+  ) {
+    throw new Error(
+      `Optical drives require StartOS ${opticalDriveOsVersion} or later`,
+    )
   }
   return requested
 }

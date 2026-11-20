@@ -75,6 +75,18 @@ pub async fn scan(sys: &Path) -> BTreeSet<OpticalNode> {
     nodes
 }
 
+/// The nodes to detach, then the nodes to attach, to take `applied` to `desired`. A drive whose
+/// node keeps its path but changes numbers is in both lists, so detach before attaching.
+pub fn plan(
+    applied: &BTreeSet<OpticalNode>,
+    desired: &BTreeSet<OpticalNode>,
+) -> (Vec<OpticalNode>, Vec<OpticalNode>) {
+    (
+        applied.difference(desired).cloned().collect(),
+        desired.difference(applied).cloned().collect(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,5 +149,40 @@ mod tests {
     async fn a_missing_sysfs_yields_no_drives() {
         let sys = tempfile::tempdir().unwrap();
         assert!(scan(&sys.path().join("absent")).await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_block_node_appears_before_the_generic_one() {
+        // `sg` can load after `sr`; the generic node is then picked up by a later scan.
+        let sys = tempfile::tempdir().unwrap();
+        let root = sys.path();
+        write(root, "class/block/sr0/dev", "11:0\n");
+        write(root, "class/block/sr0/device/type", "5\n");
+
+        assert_eq!(scan(root).await, BTreeSet::from([node("/dev/sr0", 'b', 11, 0)]));
+    }
+
+    #[test]
+    fn plan_adds_and_removes_only_what_changed() {
+        let sr0 = node("/dev/sr0", 'b', 11, 0);
+        let sg0 = node("/dev/sg0", 'c', 21, 0);
+        let sr1 = node("/dev/sr1", 'b', 11, 1);
+        let applied = BTreeSet::from([sr0.clone(), sg0.clone()]);
+
+        assert_eq!(plan(&applied, &applied), (vec![], vec![]));
+        assert_eq!(plan(&BTreeSet::new(), &applied), (vec![], vec![sr0.clone(), sg0.clone()]));
+        assert_eq!(plan(&applied, &BTreeSet::new()), (vec![sr0.clone(), sg0.clone()], vec![]));
+        assert_eq!(plan(&applied, &BTreeSet::from([sg0, sr1.clone()])), (vec![sr0], vec![sr1]));
+    }
+
+    #[test]
+    fn plan_replaces_a_node_whose_numbers_changed() {
+        let old = node("/dev/sg0", 'c', 21, 0);
+        let new = node("/dev/sg0", 'c', 21, 5);
+
+        assert_eq!(
+            plan(&BTreeSet::from([old.clone()]), &BTreeSet::from([new.clone()])),
+            (vec![old], vec![new])
+        );
     }
 }

@@ -170,6 +170,42 @@ test('an explicit compatibility override cannot understate shared-volume support
   ).toBe('0.4.3')
 })
 
+test('optical-drive capability defaults to false and preserves explicit opt-in', () => {
+  expect(
+    buildManifest({
+      versionGraph: versions,
+      manifest: manifest(),
+      dependencies: Dependencies.of(),
+      i18n,
+    }).opticalDrives,
+  ).toBe(false)
+  const built = buildManifest({
+    versionGraph: versions,
+    manifest: setupManifest({ ...manifest(), opticalDrives: true }),
+    dependencies: Dependencies.of(),
+    i18n,
+  })
+  expect(built.opticalDrives).toBe(true)
+  expect(built.osVersion).toBe('0.4.3')
+})
+
+test('an explicit compatibility override cannot understate optical-drive support', () => {
+  for (const osVersion of ['0.4.2', '0.4.1.1']) {
+    expect(() =>
+      buildManifest({
+        versionGraph: versions,
+        manifest: setupManifest({
+          ...manifest(),
+          opticalDrives: true,
+          osVersion,
+        }),
+        dependencies: Dependencies.of(),
+        i18n,
+      }),
+    ).toThrow('Optical drives require StartOS 0.4.3 or later')
+  }
+})
+
 test('the default locale is the given package i18n default language', () => {
   const own = setupI18n({}, {}, 'fr_FR')
   setupI18n({}, {}, 'de_DE')

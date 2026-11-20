@@ -10,6 +10,10 @@ const { manifest } = createRequire(import.meta.url)(
   resolve('javascript/index.js'),
 )
 export const requiresSharedVolumes = !!manifest.sharedVolumes
+// Capabilities a start-cli that predates them silently drops while packing.
+export const preservedCapabilities = ['sharedVolumes', 'opticalDrives'].filter(
+  (key) => manifest[key] === true,
+)
 
 function checkCli() {
   if (!requiresSharedVolumes) return

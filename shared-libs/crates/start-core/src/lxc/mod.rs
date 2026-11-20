@@ -733,24 +733,43 @@ async fn sync_optical_drives(
     applied: &mut BTreeSet<optical::OpticalNode>,
 ) -> Result<(), Error> {
     let desired = optical::scan(Path::new("/sys")).await;
-    let removed = applied.difference(&desired).cloned().collect::<Vec<_>>();
+    let (removed, added) = optical::plan(applied, &desired);
+    // A failure on one node must not hold up the others (a second drive, or a removal), so keep
+    // going and report the first error. A failed node stays unapplied and retries on the next tick.
+    let mut first_err = None;
+    let mut stuck = BTreeSet::new();
     for node in removed {
-        detach_node(guid, rootfs, &node.path).await?;
-        applied.remove(&node);
+        match detach_node(guid, rootfs, &node.path).await {
+            Ok(()) => {
+                applied.remove(&node);
+            }
+            Err(e) => {
+                stuck.insert(node.path);
+                first_err.get_or_insert(e);
+            }
+        }
     }
-    let added = desired.difference(applied).cloned().collect::<Vec<_>>();
     for node in added {
-        if let Err(e) = LxcContainer::mknod_in(
+        // `mknod_in` treats a node already at the path as the new one, so never add over a
+        // stale node that could not be detached.
+        if stuck.contains(&node.path) {
+            continue;
+        }
+        match LxcContainer::mknod_in(
             guid, rootfs, &node.path, node.ty, node.major, node.minor, 0o660,
         )
         .await
         {
-            detach_node(guid, rootfs, &node.path).await.log_err();
-            return Err(e);
+            Ok(()) => {
+                applied.insert(node);
+            }
+            Err(e) => {
+                detach_node(guid, rootfs, &node.path).await.log_err();
+                first_err.get_or_insert(e);
+            }
         }
-        applied.insert(node);
     }
-    Ok(())
+    first_err.map_or(Ok(()), Err)
 }
 
 async fn detach_node(guid: &str, rootfs: &Path, path: &Path) -> Result<(), Error> {
