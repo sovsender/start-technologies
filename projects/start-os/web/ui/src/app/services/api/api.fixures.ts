@@ -290,6 +290,7 @@ export namespace Mock {
   }
 
   export const RegistryInfo: T.RegistryInfo = {
+    defaultLocale: 'en_US',
     trustSigners: {
       'start9-signer': {
         name: 'Start9',
@@ -386,6 +387,7 @@ export namespace Mock {
     userspaceFilesystems: false,
     virtualNetworking: false,
     hardwareVirtualization: false,
+    opticalDrives: false,
     plugins: [],
   }
 
@@ -443,6 +445,7 @@ export namespace Mock {
     userspaceFilesystems: false,
     virtualNetworking: false,
     hardwareVirtualization: false,
+    opticalDrives: false,
     plugins: [],
   }
 
@@ -486,6 +489,7 @@ export namespace Mock {
     userspaceFilesystems: false,
     virtualNetworking: false,
     hardwareVirtualization: false,
+    opticalDrives: false,
     plugins: ['url-v0'],
   }
 
@@ -536,6 +540,7 @@ export namespace Mock {
     userspaceFilesystems: false,
     virtualNetworking: false,
     hardwareVirtualization: false,
+    opticalDrives: false,
     plugins: [],
   }
 
@@ -608,6 +613,7 @@ export namespace Mock {
             userspaceFilesystems: false,
             virtualNetworking: false,
             hardwareVirtualization: false,
+            opticalDrives: false,
             plugins: [],
           },
           '#knots:26.1.20240325:0': {
@@ -646,6 +652,7 @@ export namespace Mock {
             userspaceFilesystems: false,
             virtualNetworking: false,
             hardwareVirtualization: false,
+            opticalDrives: false,
             plugins: [],
           },
         },
@@ -694,6 +701,7 @@ export namespace Mock {
             userspaceFilesystems: false,
             virtualNetworking: false,
             hardwareVirtualization: false,
+            opticalDrives: false,
             plugins: [],
           },
           '#knots:26.1.20240325:0': {
@@ -732,6 +740,7 @@ export namespace Mock {
             userspaceFilesystems: false,
             virtualNetworking: false,
             hardwareVirtualization: false,
+            opticalDrives: false,
             plugins: [],
           },
         },
@@ -785,6 +794,7 @@ export namespace Mock {
             userspaceFilesystems: false,
             virtualNetworking: false,
             hardwareVirtualization: false,
+            opticalDrives: false,
             plugins: [],
           },
         },
@@ -836,6 +846,7 @@ export namespace Mock {
             userspaceFilesystems: false,
             virtualNetworking: false,
             hardwareVirtualization: false,
+            opticalDrives: false,
             plugins: [],
           },
         },
@@ -888,6 +899,7 @@ export namespace Mock {
             userspaceFilesystems: false,
             virtualNetworking: false,
             hardwareVirtualization: false,
+            opticalDrives: false,
             plugins: [],
           },
         },
@@ -1012,6 +1024,7 @@ For the full changelog, see https://github.com/bitcoin/bitcoin/blob/v27.0.0/doc/
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
         '#knots:27.1.0:0': {
@@ -1050,6 +1063,7 @@ For the full changelog, see https://github.com/bitcoin/bitcoin/blob/v27.0.0/doc/
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
       },
@@ -1101,6 +1115,7 @@ For the full changelog, see https://github.com/bitcoin/bitcoin/blob/v27.0.0/doc/
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
       },
@@ -1158,6 +1173,7 @@ Full changelog: https://github.com/Kixunil/btc-rpc-proxy/blob/master/CHANGELOG.m
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
         '#test:0.5.0:0': {
@@ -1195,6 +1211,7 @@ Full changelog: https://github.com/Kixunil/btc-rpc-proxy/blob/master/CHANGELOG.m
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
       },

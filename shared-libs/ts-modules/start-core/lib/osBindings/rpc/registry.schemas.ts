@@ -578,6 +578,11 @@ export const ReplaceOperation: z.ZodObject<{
   id: 'ReplaceOperation',
   description: "JSON Patch 'replace' operation representation",
 })
+export const SetDefaultLocaleParams: z.ZodObject<{
+  defaultLocale: z.ZodNullable<z.ZodString>
+}> = /* @__PURE__ */ object({ defaultLocale: z.string().nullable() }).meta({
+  id: 'SetDefaultLocaleParams',
+})
 export const SetNameParams: z.ZodObject<{ name: z.ZodString }> =
   /* @__PURE__ */ object({ name: z.string() }).meta({
     id: 'SetNameParams',
@@ -1099,7 +1104,19 @@ export const PackageIcon: z.ZodUnion<readonly [typeof DataUrl, z.ZodString]> =
     })
 export const PackageInfoShort: z.ZodObject<{
   releaseNotes: typeof LocaleString
-}> = /* @__PURE__ */ object({ releaseNotes: LocaleString }).meta({
+  /**
+   * `PackageMetadata::default_locale`.
+   */
+  defaultLocale: z.ZodOptional<z.ZodNullable<z.ZodString>>
+}> = /* @__PURE__ */ object({
+  releaseNotes: LocaleString,
+  /**
+   * `PackageMetadata::default_locale`.
+   */
+  defaultLocale: z.string().nullable().optional().meta({
+    description: '`PackageMetadata::default_locale`.',
+  }),
+}).meta({
   id: 'PackageInfoShort',
 })
 export const PackageReaderParams: z.ZodObject<{
@@ -1378,6 +1395,13 @@ export const SubscribeIndexParams: z.ZodIntersection<
       z.ZodOptional<z.ZodNullable<z.ZodString>>,
       z.ZodNullable<z.ZodString>
     >
+    /**
+     * Locale to resolve localized text to; one the index lacks gets the fallback. Omission keeps every translation.
+     */
+    language: z.ZodCodec<
+      z.ZodOptional<z.ZodNullable<z.ZodString>>,
+      z.ZodNullable<z.ZodString>
+    >
   }>,
   typeof ReaderParams
 > = /* @__PURE__ */ z
@@ -1393,6 +1417,16 @@ export const SubscribeIndexParams: z.ZodIntersection<
       ).meta({
         description:
           'Client StartOS version. Omission preserves the canonical index format.',
+      }),
+      /**
+       * Locale to resolve localized text to; one the index lacks gets the fallback. Omission keeps every translation.
+       */
+      language: wire(
+        z.string().nullable().optional(),
+        z.string().nullable(),
+      ).meta({
+        description:
+          'Locale to resolve localized text to; one the index lacks gets the fallback. Omission keeps every translation.',
       }),
     }),
     ReaderParams,
@@ -1467,6 +1501,10 @@ export const PackageAccess: z.ZodObject<{
 })
 export const PackageMetadata: z.ZodObject<{
   title: z.ZodString
+  /**
+   * Locale this package's `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: z.ZodOptional<z.ZodNullable<z.ZodString>>
   description: typeof Description
   releaseNotes: typeof LocaleString
   preDownloadAlert: z.ZodOptional<z.ZodNullable<typeof PreDownloadAlert>>
@@ -1503,6 +1541,10 @@ export const PackageMetadata: z.ZodObject<{
    * Grants /dev/kvm when present. The opening process must run as container root.
    */
   hardwareVirtualization: z.ZodCodec<z.ZodOptional<z.ZodBoolean>, z.ZodBoolean>
+  /**
+   * Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+   */
+  opticalDrives: z.ZodCodec<z.ZodOptional<z.ZodBoolean>, z.ZodBoolean>
   plugins: z.ZodCodec<
     z.ZodOptional<z.ZodArray<typeof PluginId>>,
     z.ZodArray<typeof PluginId>
@@ -1513,6 +1555,13 @@ export const PackageMetadata: z.ZodObject<{
   >
 }> = /* @__PURE__ */ object({
   title: z.string(),
+  /**
+   * Locale this package's `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: z.string().nullable().optional().meta({
+    description:
+      "Locale this package's `LocaleString`s fall back to when a requested one is missing.",
+  }),
   description: Description,
   releaseNotes: LocaleString,
   preDownloadAlert: PreDownloadAlert.nullable().optional(),
@@ -1543,6 +1592,13 @@ export const PackageMetadata: z.ZodObject<{
   hardwareVirtualization: wire(z.boolean().optional(), z.boolean()).meta({
     description:
       'Grants /dev/kvm when present. The opening process must run as container root.',
+  }),
+  /**
+   * Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+   */
+  opticalDrives: wire(z.boolean().optional(), z.boolean()).meta({
+    description:
+      'Grants optical drives and their SCSI generic nodes, including ones plugged in later.',
   }),
   plugins: wire(z.array(PluginId).optional(), z.array(PluginId)),
   satisfies: wire(z.array(Version).optional(), z.array(Version)),
@@ -1575,6 +1631,13 @@ export const RegistryInfo: z.ZodObject<{
     z.ZodOptional<z.ZodNullable<typeof LocaleString>>,
     z.ZodNullable<typeof LocaleString>
   >
+  /**
+   * `FullIndex::default_locale`.
+   */
+  defaultLocale: z.ZodCodec<
+    z.ZodOptional<z.ZodNullable<z.ZodString>>,
+    z.ZodNullable<z.ZodString>
+  >
   categories: z.ZodRecord<z.ZodString, typeof Category>
   /**
    * Registry-selected signers, not an assertion of trust.
@@ -1594,6 +1657,15 @@ export const RegistryInfo: z.ZodObject<{
     LocaleString.nullable(),
   ).meta({
     description: "Markdown, shown above the registry's services.",
+  }),
+  /**
+   * `FullIndex::default_locale`.
+   */
+  defaultLocale: wire(
+    z.string().nullable().optional(),
+    z.string().nullable(),
+  ).meta({
+    description: '`FullIndex::default_locale`.',
   }),
   categories: z.record(z.string(), Category),
   /**
@@ -1755,6 +1827,13 @@ export const FullIndex: z.ZodObject<{
     z.ZodOptional<z.ZodNullable<typeof LocaleString>>,
     z.ZodNullable<typeof LocaleString>
   >
+  /**
+   * Locale registry-owned `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: z.ZodCodec<
+    z.ZodOptional<z.ZodNullable<z.ZodString>>,
+    z.ZodNullable<z.ZodString>
+  >
   package: typeof PackageIndex
   os: typeof OsIndex
   signers: z.ZodRecord<z.ZodString, typeof SignerInfo>
@@ -1769,6 +1848,16 @@ export const FullIndex: z.ZodObject<{
     LocaleString.nullable().optional(),
     LocaleString.nullable(),
   ),
+  /**
+   * Locale registry-owned `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: wire(
+    z.string().nullable().optional(),
+    z.string().nullable(),
+  ).meta({
+    description:
+      'Locale registry-owned `LocaleString`s fall back to when a requested one is missing.',
+  }),
   package: PackageIndex,
   os: OsIndex,
   signers: z.record(z.string(), SignerInfo),
@@ -1901,6 +1990,23 @@ export const Api = {
       _ITEM: /* @__PURE__ */ z.never(),
       _FINAL: /* @__PURE__ */ z.null(),
       _CHILDREN: {
+        'set-default-locale': {
+          _PARAMS: /* @__PURE__ */ z.intersection(
+            z.intersection(
+              object({
+                format: wire(
+                  IoFormat.nullable().optional(),
+                  IoFormat.nullable(),
+                ),
+              }),
+              empty,
+            ),
+            SetDefaultLocaleParams,
+          ),
+          _RETURN: /* @__PURE__ */ z.null(),
+          _ITEM: /* @__PURE__ */ z.never(),
+          _FINAL: /* @__PURE__ */ z.null(),
+        },
         'set-description': {
           _PARAMS: /* @__PURE__ */ z.intersection(
             z.intersection(

@@ -27,6 +27,11 @@ export const long = {
 }
 ```
 
+If neither the requested locale nor a same-language translation is available,
+StartOS and registries use the package's default locale: the `DEFAULT_LANG` given
+to `setupI18n` in `startos/i18n`. `buildManifest()` reads it from the `i18n`
+passed in `startos/index.ts`.
+
 ### How long each one may be
 
 |         | limit           |
@@ -350,6 +355,24 @@ The device appears only on a server whose CPU supports virtualization and whose 
 > [!WARNING]
 > `/dev/kvm` is a direct interface to the host kernel's hypervisor, so it widens the kernel attack surface reachable from the service. Enable it only for a service that genuinely runs virtual machines.
 
+### Optical Drives
+
+For services that read discs, such as ripping or archiving tools, set `opticalDrives: true` at the manifest top level:
+
+```typescript
+opticalDrives: true,
+```
+
+When set, StartOS exposes the server's optical drives inside the service's container: the block node `/dev/srN` and its SCSI generic node `/dev/sgN`. A drive connected while the service runs appears within a few seconds, and the nodes of a drive that is disconnected are removed. Other disks, even on the same controller, are never exposed. The capability requires StartOS 0.4.3; `buildManifest` rejects an explicit older `osVersion`.
+
+The numbers are not stable: a drive that is unplugged and plugged in again can come back as `/dev/sr1` and `/dev/sg1`. Look for `/dev/sr*` and `/dev/sg*` instead of hard-coding `sr0`.
+
+> [!IMPORTANT]
+> Like `/dev/kvm`, the nodes belong to the container's root with mode `0660`. **Run the process that opens them as root.**
+
+> [!WARNING]
+> The SCSI generic node accepts any command the drive understands, including firmware writes. Enable `opticalDrives` only for a service that genuinely reads or writes discs.
+
 ### Multiple Images
 
 Services can define multiple images. Each image needs its own `arch` field:
@@ -391,4 +414,4 @@ To support user-managed local folders, attached drives and network shares, decla
 
 ## Dependencies
 
-Define dependencies in `startos/dependencies.ts` with `sdk.Dependency.required` or `sdk.Dependency.optional`, and pass the resulting `sdk.Dependencies.of()` builder to `buildManifest(versionGraph, sdkManifest, dependencies)`. See [Dependencies](dependencies.md) for base requirements and runtime narrowing.
+Define dependencies in `startos/dependencies.ts` with `sdk.Dependency.required` or `sdk.Dependency.optional`, and pass the resulting `sdk.Dependencies.of()` builder to `buildManifest({ versionGraph, manifest, dependencies, i18n })`. See [Dependencies](dependencies.md) for base requirements and runtime narrowing.

@@ -1574,6 +1574,11 @@ export const SetDataVersionParams: z.ZodObject<{
 }).meta({
   id: 'SetDataVersionParams',
 })
+export const SetDefaultLocaleParams: z.ZodObject<{
+  defaultLocale: z.ZodNullable<z.ZodString>
+}> = /* @__PURE__ */ object({ defaultLocale: z.string().nullable() }).meta({
+  id: 'SetDefaultLocaleParams',
+})
 export const SetLanguageParams: z.ZodObject<{ language: z.ZodString }> =
   /* @__PURE__ */ object({ language: z.string() }).meta({
     id: 'SetLanguageParams',
@@ -4032,7 +4037,19 @@ export const PackageIcon: z.ZodUnion<readonly [typeof DataUrl, z.ZodString]> =
     })
 export const PackageInfoShort: z.ZodObject<{
   releaseNotes: typeof LocaleString
-}> = /* @__PURE__ */ object({ releaseNotes: LocaleString }).meta({
+  /**
+   * `PackageMetadata::default_locale`.
+   */
+  defaultLocale: z.ZodOptional<z.ZodNullable<z.ZodString>>
+}> = /* @__PURE__ */ object({
+  releaseNotes: LocaleString,
+  /**
+   * `PackageMetadata::default_locale`.
+   */
+  defaultLocale: z.string().nullable().optional().meta({
+    description: '`PackageMetadata::default_locale`.',
+  }),
+}).meta({
   id: 'PackageInfoShort',
 })
 export const PackageReaderParams: z.ZodObject<{
@@ -4777,6 +4794,31 @@ export const SmtpValue: z.ZodCodec<
 export const SshAddParams: z.ZodObject<{ key: typeof SshPubKey }> =
   /* @__PURE__ */ object({ key: SshPubKey }).meta({
     id: 'SshAddParams',
+  })
+
+/**
+ * Authorized-key intent shared by SSH mutations and subscribed clients.
+ */
+export const SshKeys: z.ZodRecord<
+  z.ZodString,
+  z.ZodObject<{
+    created_at: z.ZodString
+    updated_at: z.ZodString
+    value: typeof SshPubKey
+  }>
+> = /* @__PURE__ */ z
+  .record(
+    z.string(),
+    object({
+      created_at: z.string(),
+      updated_at: z.string(),
+      value: SshPubKey,
+    }),
+  )
+  .meta({
+    id: 'SshKeys',
+    description:
+      'Authorized-key intent shared by SSH mutations and subscribed clients.',
   })
 
 /**
@@ -5669,6 +5711,13 @@ export const NutConfig: z.ZodObject<{
 export const OsUpdateCache: z.ZodObject<{
   registry: z.ZodString
   versions: z.ZodRecord<z.ZodString, typeof OsVersionInfo>
+  /**
+   * Tracks the source registry's cached `RegistryInfo::default_locale`.
+   */
+  defaultLocale: z.ZodCodec<
+    z.ZodOptional<z.ZodNullable<z.ZodString>>,
+    z.ZodNullable<z.ZodString>
+  >
   status: z.ZodCodec<
     z.ZodOptional<typeof RegistryStatus>,
     typeof RegistryStatus
@@ -5680,6 +5729,16 @@ export const OsUpdateCache: z.ZodObject<{
 }> = /* @__PURE__ */ object({
   registry: z.string(),
   versions: z.record(z.string(), OsVersionInfo),
+  /**
+   * Tracks the source registry's cached `RegistryInfo::default_locale`.
+   */
+  defaultLocale: wire(
+    z.string().nullable().optional(),
+    z.string().nullable(),
+  ).meta({
+    description:
+      "Tracks the source registry's cached `RegistryInfo::default_locale`.",
+  }),
   status: wire(RegistryStatus.optional(), RegistryStatus),
   /**
    * Failure of the latest synchronization attempt; absent while connecting or connected.
@@ -5707,6 +5766,10 @@ export const PackageAccess: z.ZodObject<{
 })
 export const PackageMetadata: z.ZodObject<{
   title: z.ZodString
+  /**
+   * Locale this package's `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: z.ZodOptional<z.ZodNullable<z.ZodString>>
   description: typeof Description
   releaseNotes: typeof LocaleString
   preDownloadAlert: z.ZodOptional<z.ZodNullable<typeof PreDownloadAlert>>
@@ -5743,6 +5806,10 @@ export const PackageMetadata: z.ZodObject<{
    * Grants /dev/kvm when present. The opening process must run as container root.
    */
   hardwareVirtualization: z.ZodCodec<z.ZodOptional<z.ZodBoolean>, z.ZodBoolean>
+  /**
+   * Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+   */
+  opticalDrives: z.ZodCodec<z.ZodOptional<z.ZodBoolean>, z.ZodBoolean>
   plugins: z.ZodCodec<
     z.ZodOptional<z.ZodArray<typeof PluginId>>,
     z.ZodArray<typeof PluginId>
@@ -5753,6 +5820,13 @@ export const PackageMetadata: z.ZodObject<{
   >
 }> = /* @__PURE__ */ object({
   title: z.string(),
+  /**
+   * Locale this package's `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: z.string().nullable().optional().meta({
+    description:
+      "Locale this package's `LocaleString`s fall back to when a requested one is missing.",
+  }),
   description: Description,
   releaseNotes: LocaleString,
   preDownloadAlert: PreDownloadAlert.nullable().optional(),
@@ -5783,6 +5857,13 @@ export const PackageMetadata: z.ZodObject<{
   hardwareVirtualization: wire(z.boolean().optional(), z.boolean()).meta({
     description:
       'Grants /dev/kvm when present. The opening process must run as container root.',
+  }),
+  /**
+   * Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+   */
+  opticalDrives: wire(z.boolean().optional(), z.boolean()).meta({
+    description:
+      'Grants optical drives and their SCSI generic nodes, including ones plugged in later.',
   }),
   plugins: wire(z.array(PluginId).optional(), z.array(PluginId)),
   satisfies: wire(z.array(Version).optional(), z.array(Version)),
@@ -5935,6 +6016,13 @@ export const RegistryInfo: z.ZodObject<{
     z.ZodOptional<z.ZodNullable<typeof LocaleString>>,
     z.ZodNullable<typeof LocaleString>
   >
+  /**
+   * `FullIndex::default_locale`.
+   */
+  defaultLocale: z.ZodCodec<
+    z.ZodOptional<z.ZodNullable<z.ZodString>>,
+    z.ZodNullable<z.ZodString>
+  >
   categories: z.ZodRecord<z.ZodString, typeof Category>
   /**
    * Registry-selected signers, not an assertion of trust.
@@ -5954,6 +6042,15 @@ export const RegistryInfo: z.ZodObject<{
     LocaleString.nullable(),
   ).meta({
     description: "Markdown, shown above the registry's services.",
+  }),
+  /**
+   * `FullIndex::default_locale`.
+   */
+  defaultLocale: wire(
+    z.string().nullable().optional(),
+    z.string().nullable(),
+  ).meta({
+    description: '`FullIndex::default_locale`.',
   }),
   categories: z.record(z.string(), Category),
   /**
@@ -6596,6 +6693,8 @@ export const DepInfo: z.ZodIntersection<
 export const DerivedAddressInfo: z.ZodObject<{
   /**
    * User override: enable these addresses (only for public IP & port)
+   * An opt-in names one literal address and lapses when the gateway renumbers.
+   * Only an enabled plain public domain carries its group's public IPs across.
    */
   enabled: z.ZodArray<z.ZodString>
   /**
@@ -6652,10 +6751,12 @@ export const DerivedAddressInfo: z.ZodObject<{
 }> = /* @__PURE__ */ object({
   /**
    * User override: enable these addresses (only for public IP & port)
+   * An opt-in names one literal address and lapses when the gateway renumbers.
+   * Only an enabled plain public domain carries its group's public IPs across.
    */
   enabled: z.array(z.string()).meta({
     description:
-      'User override: enable these addresses (only for public IP & port)',
+      "User override: enable these addresses (only for public IP & port)\nAn opt-in names one literal address and lapses when the gateway renumbers.\nOnly an enabled plain public domain carries its group's public IPs across.",
   }),
   /**
    * User override: disable these addresses (only for domains and private IP & port)
@@ -7345,6 +7446,13 @@ export const FullIndex: z.ZodObject<{
     z.ZodOptional<z.ZodNullable<typeof LocaleString>>,
     z.ZodNullable<typeof LocaleString>
   >
+  /**
+   * Locale registry-owned `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: z.ZodCodec<
+    z.ZodOptional<z.ZodNullable<z.ZodString>>,
+    z.ZodNullable<z.ZodString>
+  >
   package: typeof PackageIndex
   os: typeof OsIndex
   signers: z.ZodRecord<z.ZodString, typeof SignerInfo>
@@ -7359,6 +7467,16 @@ export const FullIndex: z.ZodObject<{
     LocaleString.nullable().optional(),
     LocaleString.nullable(),
   ),
+  /**
+   * Locale registry-owned `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: wire(
+    z.string().nullable().optional(),
+    z.string().nullable(),
+  ).meta({
+    description:
+      'Locale registry-owned `LocaleString`s fall back to when a requested one is missing.',
+  }),
   package: PackageIndex,
   os: OsIndex,
   signers: z.record(z.string(), SignerInfo),
@@ -7762,6 +7880,7 @@ export const AllPackageData: z.ZodRecord<z.ZodString, typeof PackageDataEntry> =
 export const Public: z.ZodObject<{
   serverInfo: typeof ServerInfo
   packageData: typeof AllPackageData
+  sshPubkeys: z.ZodCodec<z.ZodOptional<typeof SshKeys>, typeof SshKeys>
   registryCache: z.ZodCodec<
     z.ZodOptional<z.ZodRecord<z.ZodString, typeof RegistryCache>>,
     z.ZodRecord<z.ZodString, typeof RegistryCache>
@@ -7789,6 +7908,7 @@ export const Public: z.ZodObject<{
 }> = /* @__PURE__ */ object({
   serverInfo: ServerInfo,
   packageData: AllPackageData,
+  sshPubkeys: wire(SshKeys.optional(), SshKeys),
   registryCache: wire(
     z.record(z.string(), RegistryCache).optional(),
     z.record(z.string(), RegistryCache),

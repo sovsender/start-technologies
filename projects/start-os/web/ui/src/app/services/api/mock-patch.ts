@@ -97,11 +97,22 @@ export function mockOsUpdateCache(
     versions: sameUrl(registry, defaultRegistries.community)
       ? {}
       : Mock.RegistryOSUpdate,
+    defaultLocale: 'en_US',
     status: 'connected',
   }
 }
 
 export const mockPatchData: DataModel = {
+  sshPubkeys: Object.fromEntries(
+    Mock.SshKeys.map(key => [
+      key.fingerprint,
+      {
+        created_at: key.createdAt,
+        updated_at: key.createdAt,
+        value: `${key.alg} mock ${key.hostname}`,
+      },
+    ]),
+  ),
   registryCache: {
     [defaultRegistries.start9]: mockRegistryCache(
       defaultRegistries.start9,

@@ -2350,6 +2350,10 @@ export const NamedHealthCheckResult: z.ZodCodec<
 })
 export const PackageMetadata: z.ZodObject<{
   title: z.ZodString
+  /**
+   * Locale this package's `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: z.ZodOptional<z.ZodNullable<z.ZodString>>
   description: typeof Description
   releaseNotes: typeof LocaleString
   preDownloadAlert: z.ZodOptional<z.ZodNullable<typeof PreDownloadAlert>>
@@ -2386,6 +2390,10 @@ export const PackageMetadata: z.ZodObject<{
    * Grants /dev/kvm when present. The opening process must run as container root.
    */
   hardwareVirtualization: z.ZodCodec<z.ZodOptional<z.ZodBoolean>, z.ZodBoolean>
+  /**
+   * Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+   */
+  opticalDrives: z.ZodCodec<z.ZodOptional<z.ZodBoolean>, z.ZodBoolean>
   plugins: z.ZodCodec<
     z.ZodOptional<z.ZodArray<typeof PluginId>>,
     z.ZodArray<typeof PluginId>
@@ -2396,6 +2404,13 @@ export const PackageMetadata: z.ZodObject<{
   >
 }> = /* @__PURE__ */ object({
   title: z.string(),
+  /**
+   * Locale this package's `LocaleString`s fall back to when a requested one is missing.
+   */
+  defaultLocale: z.string().nullable().optional().meta({
+    description:
+      "Locale this package's `LocaleString`s fall back to when a requested one is missing.",
+  }),
   description: Description,
   releaseNotes: LocaleString,
   preDownloadAlert: PreDownloadAlert.nullable().optional(),
@@ -2426,6 +2441,13 @@ export const PackageMetadata: z.ZodObject<{
   hardwareVirtualization: wire(z.boolean().optional(), z.boolean()).meta({
     description:
       'Grants /dev/kvm when present. The opening process must run as container root.',
+  }),
+  /**
+   * Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+   */
+  opticalDrives: wire(z.boolean().optional(), z.boolean()).meta({
+    description:
+      'Grants optical drives and their SCSI generic nodes, including ones plugged in later.',
   }),
   plugins: wire(z.array(PluginId).optional(), z.array(PluginId)),
   satisfies: wire(z.array(Version).optional(), z.array(Version)),
@@ -2760,6 +2782,8 @@ export const DepInfo: z.ZodIntersection<
 export const DerivedAddressInfo: z.ZodObject<{
   /**
    * User override: enable these addresses (only for public IP & port)
+   * An opt-in names one literal address and lapses when the gateway renumbers.
+   * Only an enabled plain public domain carries its group's public IPs across.
    */
   enabled: z.ZodArray<z.ZodString>
   /**
@@ -2816,10 +2840,12 @@ export const DerivedAddressInfo: z.ZodObject<{
 }> = /* @__PURE__ */ object({
   /**
    * User override: enable these addresses (only for public IP & port)
+   * An opt-in names one literal address and lapses when the gateway renumbers.
+   * Only an enabled plain public domain carries its group's public IPs across.
    */
   enabled: z.array(z.string()).meta({
     description:
-      'User override: enable these addresses (only for public IP & port)',
+      "User override: enable these addresses (only for public IP & port)\nAn opt-in names one literal address and lapses when the gateway renumbers.\nOnly an enabled plain public domain carries its group's public IPs across.",
   }),
   /**
    * User override: disable these addresses (only for domains and private IP & port)

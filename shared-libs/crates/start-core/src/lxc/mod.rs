@@ -20,7 +20,6 @@ use tokio::time::Instant;
 use crate::context::RpcContext;
 use crate::disk::mount::filesystem::bind::Bind;
 use crate::disk::mount::filesystem::block_dev::BlockDev;
-use crate::disk::mount::filesystem::idmapped::{IdMap, IdMapped};
 use crate::disk::mount::filesystem::overlayfs::OverlayGuard;
 use crate::disk::mount::filesystem::{MountType, ReadOnly, ReadWrite};
 use crate::disk::mount::guard::{GenericMountGuard, MountGuard, TmpMountGuard};
@@ -28,16 +27,16 @@ use crate::disk::mount::util::unmount;
 use crate::prelude::*;
 use crate::rpc_continuations::{Guid, RpcContinuation, WebSocketPolicy};
 use crate::service::ServiceStats;
+use crate::util::future::NonDetachingJoinHandle;
 use crate::util::io::{open_file, write_file_owned_atomic};
 use crate::util::rpc_client::UnixRpcClient;
 use crate::util::{FromStrParser, Invoke, new_guid};
 use crate::{InvalidId, PackageId};
 
-pub(crate) const BASE_IDMAP: IdMap = IdMap {
-    from_id: 0,
-    to_id: 100000,
-    range: 65536,
-};
+mod filesystem;
+mod optical;
+
+pub(crate) use filesystem::{BASE_IDMAP, service_filesystem, unshifted_filesystem};
 
 fn config_text(guid: &str, lang: &str) -> String {
     format!(
@@ -59,6 +58,7 @@ const HARDWARE_ACCELERATION_PATHS: &[&str] = &["/dev/dri", "/dev/nvidia*", "/dev
 const USERSPACE_FILESYSTEM_PATHS: &[&str] = &["/dev/fuse"];
 const VIRTUAL_NETWORKING_PATHS: &[&str] = &["/dev/net/tun"];
 const HARDWARE_VIRTUALIZATION_PATHS: &[&str] = &["/dev/kvm"];
+const OPTICAL_DRIVE_POLL_INTERVAL: Duration = Duration::from_secs(2);
 
 #[cfg(all(test, target_os = "linux"))]
 mod gc_tests;
@@ -243,6 +243,7 @@ pub struct LxcContainer {
     rpc_bind: TmpMountGuard,
     log_mount: Option<MountGuard>,
     config: LxcConfig,
+    optical_drives: Option<NonDetachingJoinHandle<()>>,
     exited: bool,
 }
 impl LxcContainer {
@@ -261,9 +262,9 @@ impl LxcContainer {
         let rootfs_dir = container_dir.join("rootfs");
         let rootfs = OverlayGuard::mount(
             TmpMountGuard::mount(
-                &IdMapped::new(
+                &service_filesystem(
                     BlockDev::new("/usr/lib/startos/container-runtime/rootfs.squashfs"),
-                    vec![BASE_IDMAP],
+                    &[],
                 ),
                 ReadOnly,
             )
@@ -353,12 +354,13 @@ impl LxcContainer {
             .arg("DEBUG")
             .invoke(ErrorKind::Lxc)
             .await?;
-        let res = Self {
+        let mut res = Self {
             manager: Arc::downgrade(manager),
             rootfs,
             guid: Arc::new(ContainerId::try_from(&*guid)?),
             rpc_bind,
             config,
+            optical_drives: None,
             exited: false,
             log_mount,
         };
@@ -371,7 +373,29 @@ impl LxcContainer {
             )
             .await?;
         }
+        if res.config.optical_drives {
+            res.optical_drives = Some(res.track_optical_drives().await);
+        }
         Ok(res)
+    }
+
+    async fn track_optical_drives(&self) -> NonDetachingJoinHandle<()> {
+        let guid = self.guid.clone();
+        let rootfs = self.rootfs_dir().to_path_buf();
+        let mut applied = BTreeSet::new();
+        if let Err(e) = sync_optical_drives(&**guid, &rootfs, &mut applied).await {
+            tracing::warn!("optical drives for {}: {e}", &**guid);
+            tracing::debug!("{e:?}");
+        }
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(OPTICAL_DRIVE_POLL_INTERVAL).await;
+                if let Err(e) = sync_optical_drives(&**guid, &rootfs, &mut applied).await {
+                    tracing::debug!("optical drives for {}: {e:?}", &**guid);
+                }
+            }
+        })
+        .into()
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -534,6 +558,7 @@ impl LxcContainer {
 
     #[instrument(skip_all)]
     pub async fn exit(mut self) -> Result<(), Error> {
+        self.optical_drives.take();
         Command::new("lxc-stop")
             .arg("--name")
             .arg(&**self.guid)
@@ -595,11 +620,32 @@ impl LxcContainer {
         minor: u32,
         mode: u32,
     ) -> Result<(), Error> {
+        Self::mknod_in(
+            &**self.guid,
+            self.rootfs_dir(),
+            path,
+            ty,
+            major,
+            minor,
+            mode,
+        )
+        .await
+    }
+
+    async fn mknod_in(
+        guid: &str,
+        rootfs: &Path,
+        path: &Path,
+        ty: char,
+        major: u32,
+        minor: u32,
+        mode: u32,
+    ) -> Result<(), Error> {
         // -m so the node carries the host's mode instead of `0666 & ~umask(startd)`.
         let mode = format!("{mode:04o}");
         if let Ok(dev_rel) = path.strip_prefix("/dev") {
             let parent = dev_rel.parent();
-            let media_dev = self.rootfs_dir().join("media/startos/dev");
+            let media_dev = rootfs.join("media/startos/dev");
             let target_path = media_dev.join(dev_rel);
             if tokio::fs::metadata(&target_path).await.is_ok() {
                 return Ok(());
@@ -633,7 +679,7 @@ impl LxcContainer {
                 .await?;
             if let Some(parent) = parent {
                 Command::new("lxc-attach")
-                    .arg(&**self.guid)
+                    .arg(guid)
                     .arg("--")
                     .arg("mkdir")
                     .arg("-p")
@@ -642,14 +688,14 @@ impl LxcContainer {
                     .await?;
             }
             Command::new("lxc-attach")
-                .arg(&**self.guid)
+                .arg(guid)
                 .arg("--")
                 .arg("touch")
                 .arg(&path)
                 .invoke(ErrorKind::Lxc)
                 .await?;
             Command::new("lxc-attach")
-                .arg(&**self.guid)
+                .arg(guid)
                 .arg("--")
                 .arg("mount")
                 .arg("--bind")
@@ -658,9 +704,7 @@ impl LxcContainer {
                 .invoke(ErrorKind::Lxc)
                 .await?;
         } else {
-            let target_path = self
-                .rootfs_dir()
-                .join(path.strip_prefix("/").unwrap_or(&path));
+            let target_path = rootfs.join(path.strip_prefix("/").unwrap_or(&path));
             if tokio::fs::metadata(&target_path).await.is_ok() {
                 return Ok(());
             }
@@ -682,6 +726,79 @@ impl LxcContainer {
         Ok(())
     }
 }
+
+async fn sync_optical_drives(
+    guid: &str,
+    rootfs: &Path,
+    applied: &mut BTreeSet<optical::OpticalNode>,
+) -> Result<(), Error> {
+    let desired = optical::scan(Path::new("/sys")).await;
+    let (removed, added) = optical::plan(applied, &desired);
+    // A failure on one node must not hold up the others (a second drive, or a removal), so keep
+    // going and report the first error. A failed node stays unapplied and retries on the next tick.
+    let mut first_err = None;
+    let mut stuck = BTreeSet::new();
+    for node in removed {
+        match detach_node(guid, rootfs, &node.path).await {
+            Ok(()) => {
+                applied.remove(&node);
+            }
+            Err(e) => {
+                stuck.insert(node.path);
+                first_err.get_or_insert(e);
+            }
+        }
+    }
+    for node in added {
+        // `mknod_in` treats a node already at the path as the new one, so never add over a
+        // stale node that could not be detached.
+        if stuck.contains(&node.path) {
+            continue;
+        }
+        match LxcContainer::mknod_in(
+            guid, rootfs, &node.path, node.ty, node.major, node.minor, 0o660,
+        )
+        .await
+        {
+            Ok(()) => {
+                applied.insert(node);
+            }
+            Err(e) => {
+                detach_node(guid, rootfs, &node.path).await.log_err();
+                first_err.get_or_insert(e);
+            }
+        }
+    }
+    first_err.map_or(Ok(()), Err)
+}
+
+async fn detach_node(guid: &str, rootfs: &Path, path: &Path) -> Result<(), Error> {
+    let Ok(dev_rel) = path.strip_prefix("/dev") else {
+        return Ok(());
+    };
+    Command::new("lxc-attach")
+        .arg(guid)
+        .arg("--")
+        .arg("umount")
+        .arg("-l")
+        .arg(path)
+        .invoke(ErrorKind::Lxc)
+        .await
+        .log_err();
+    Command::new("lxc-attach")
+        .arg(guid)
+        .arg("--")
+        .arg("rm")
+        .arg("-f")
+        .arg(path)
+        .invoke(ErrorKind::Lxc)
+        .await?;
+    match tokio::fs::remove_file(rootfs.join("media/startos/dev").join(dev_rel)).await {
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
+        _ => Ok(()),
+    }
+}
+
 impl Drop for LxcContainer {
     fn drop(&mut self) {
         if !self.exited {
@@ -741,6 +858,7 @@ pub struct LxcConfig {
     pub userspace_filesystems: bool,
     pub virtual_networking: bool,
     pub hardware_virtualization: bool,
+    pub optical_drives: bool,
 }
 impl LxcConfig {
     fn granted_device_paths(&self) -> Vec<&'static [&'static str]> {
@@ -915,6 +1033,7 @@ mod test {
             userspace_filesystems: true,
             virtual_networking: true,
             hardware_virtualization: true,
+            optical_drives: true,
         };
         assert_eq!(
             config.granted_device_paths(),

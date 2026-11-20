@@ -15,6 +15,7 @@ const mockDescription = {
 
 export namespace Mock {
   export const RegistryInfo: T.RegistryInfo = {
+    defaultLocale: 'en_US',
     trustSigners: {},
     name: 'Start9 Registry',
     icon: REGISTRY_ICON,
@@ -164,6 +165,7 @@ For the full changelog, see https://github.com/bitcoin/bitcoin/blob/v27.0.0/doc/
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
         '#knots:27.1.0:0': {
@@ -202,6 +204,7 @@ For the full changelog, see https://github.com/bitcoin/bitcoin/blob/v27.0.0/doc/
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
       },
@@ -253,6 +256,7 @@ For the full changelog, see https://github.com/bitcoin/bitcoin/blob/v27.0.0/doc/
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
       },
@@ -303,6 +307,7 @@ For the full changelog, see https://github.com/bitcoin/bitcoin/blob/v27.0.0/doc/
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
         '#test:0.5.0:0': {
@@ -340,6 +345,7 @@ For the full changelog, see https://github.com/bitcoin/bitcoin/blob/v27.0.0/doc/
           userspaceFilesystems: false,
           virtualNetworking: false,
           hardwareVirtualization: false,
+          opticalDrives: false,
           plugins: [],
         },
       },

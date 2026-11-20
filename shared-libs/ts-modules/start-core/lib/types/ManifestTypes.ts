@@ -146,6 +146,12 @@ export type SDKManifest = {
    */
   readonly hardwareVirtualization?: boolean
 
+  /**
+   * @description Grants optical drives and their SCSI generic nodes, including ones plugged in
+   * later.
+   */
+  readonly opticalDrives?: boolean
+
   /** Enables user grants of shared volumes; opting in grants no access automatically. */
   readonly sharedVolumes?: T.Manifest['sharedVolumes']
 
