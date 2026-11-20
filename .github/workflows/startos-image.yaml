@@ -176,7 +176,8 @@ jobs:
   migration:
     name: Migration Image
     needs: [build]
-    if: contains(fromJson('["x86_64", "x86_64-nonfree", "aarch64", "aarch64-nonfree"]'), inputs.platform)
+    # Downloads a release of the previous version, which only Start9's repository has.
+    if: github.repository_owner == 'Start9Labs' && contains(fromJson('["x86_64", "x86_64-nonfree", "aarch64", "aarch64-nonfree"]'), inputs.platform)
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}

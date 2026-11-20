@@ -271,7 +271,8 @@ jobs:
   registry-image:
     name: Create Docker Image
     needs: [changes, build]
-    if: ${{ !cancelled() && needs.changes.outputs.start-registry == 'true' && needs.build.result == 'success' }}
+    # Pushes to ghcr.io/start9labs, which only Start9's org can do.
+    if: ${{ !cancelled() && needs.changes.outputs.start-registry == 'true' && needs.build.result == 'success' && github.repository_owner == 'Start9Labs' }}
     env:
       PUSH_IMAGE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     permissions:
