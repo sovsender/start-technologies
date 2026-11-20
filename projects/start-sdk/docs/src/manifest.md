@@ -350,6 +350,19 @@ When set, StartOS exposes `/dev/kvm` inside the service's container, so the gues
 > [!IMPORTANT]
 > The granted node belongs to the container's root and carries the permissions the server gives it, which on `/dev/kvm` are `0660`. **Run the process that opens it as root**, as the GPU packages do for `hardwareAcceleration` — that is the only arrangement StartOS guarantees.
 
+### Optical Drives
+
+For services that read discs, such as ripping or archiving tools, set `opticalDrives: true` at the manifest top level:
+
+```typescript
+opticalDrives: true,
+```
+
+When set, StartOS exposes the server's optical drives inside the service's container: the block node `/dev/srN` and its SCSI generic node `/dev/sgN`. A drive connected while the service runs appears within seconds, and the nodes of a drive that is disconnected are removed. Other disks, even on the same controller, are never exposed.
+
+> [!IMPORTANT]
+> Like `/dev/kvm`, the nodes belong to the container's root with mode `0660`. **Run the process that opens them as root.**
+
 The device appears only on a server whose CPU supports virtualization and whose kernel has KVM active for it. Where it does not, the service starts as normal with no `/dev/kvm` — so a service that can fall back to software emulation should test for the device and do so, and one that cannot should declare a health check saying this server does not support KVM. Give that check `gracePeriod: 0`, so it reports the reason instead of `starting`, and `sdk.trigger.onceTrigger` — the default re-polls a failing check every second for the life of the service. See [Health Checks](./main.md#health-checks).
 
 > [!WARNING]

@@ -156,6 +156,7 @@ impl PersistentContainer {
                     userspace_filesystems: s9pk.manifest.metadata.userspace_filesystems,
                     virtual_networking: s9pk.manifest.metadata.virtual_networking,
                     hardware_virtualization: s9pk.manifest.metadata.hardware_virtualization,
+                    optical_drives: s9pk.manifest.metadata.optical_drives,
                 },
             )
             .await?;

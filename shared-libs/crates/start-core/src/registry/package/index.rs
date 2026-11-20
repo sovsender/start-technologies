@@ -271,6 +271,9 @@ pub struct PackageMetadata {
     /// Grants /dev/kvm when present. The opening process must run as container root.
     #[serde(default)]
     pub hardware_virtualization: bool,
+    /// Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+    #[serde(default)]
+    pub optical_drives: bool,
     #[serde(default)]
     pub plugins: BTreeSet<PluginId>,
     #[serde(default)]
@@ -700,6 +703,7 @@ pub(crate) mod tests {
             userspace_filesystems: false,
             virtual_networking: false,
             hardware_virtualization: true,
+            optical_drives: false,
             plugins: BTreeSet::new(),
             satisfies: BTreeSet::new(),
         };

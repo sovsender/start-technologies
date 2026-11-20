@@ -1585,6 +1585,7 @@ mod tests {
             "userspaceFilesystems": false,
             "virtualNetworking": false,
             "hardwareVirtualization": false,
+            "opticalDrives": false,
             "plugins": [],
             "satisfies": [],
             "images": {},

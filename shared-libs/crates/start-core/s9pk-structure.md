@@ -88,6 +88,7 @@ The package manifest contains all metadata:
 | `userspaceFilesystems`   | boolean       | Whether package is granted `/dev/fuse`                      |
 | `virtualNetworking`      | boolean       | Whether package is granted `/dev/net/tun`                   |
 | `hardwareVirtualization` | boolean       | Whether package is granted `/dev/kvm`                       |
+| `opticalDrives`          | boolean       | Whether package is granted the optical drives               |
 | `plugins`                | string[]      | Plugin IDs the package registers                            |
 | `gitHash`                | string?       | Git commit hash                                             |
 | `osVersion`              | string        | Minimum StartOS version                                     |

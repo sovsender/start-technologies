@@ -5251,6 +5251,10 @@ export const PackageMetadata: z.ZodObject<{
    * Grants /dev/kvm when present. The opening process must run as container root.
    */
   hardwareVirtualization: z.ZodCodec<z.ZodOptional<z.ZodBoolean>, z.ZodBoolean>
+  /**
+   * Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+   */
+  opticalDrives: z.ZodCodec<z.ZodOptional<z.ZodBoolean>, z.ZodBoolean>
   plugins: z.ZodCodec<
     z.ZodOptional<z.ZodArray<typeof PluginId>>,
     z.ZodArray<typeof PluginId>
@@ -5298,6 +5302,13 @@ export const PackageMetadata: z.ZodObject<{
   hardwareVirtualization: wire(z.boolean().optional(), z.boolean()).meta({
     description:
       'Grants /dev/kvm when present. The opening process must run as container root.',
+  }),
+  /**
+   * Grants optical drives and their SCSI generic nodes, including ones plugged in later.
+   */
+  opticalDrives: wire(z.boolean().optional(), z.boolean()).meta({
+    description:
+      'Grants optical drives and their SCSI generic nodes, including ones plugged in later.',
   }),
   plugins: wire(z.array(PluginId).optional(), z.array(PluginId)),
   satisfies: wire(z.array(Version).optional(), z.array(Version)),

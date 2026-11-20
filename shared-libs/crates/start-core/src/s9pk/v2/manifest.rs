@@ -509,6 +509,7 @@ fn legacy_emulation_uses_the_image_kept_in_a_cross_arch_backup() {
         "userspaceFilesystems": false,
         "virtualNetworking": false,
         "hardwareVirtualization": false,
+        "opticalDrives": false,
         "plugins": [],
         "satisfies": [],
         "images": {

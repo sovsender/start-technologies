@@ -6748,6 +6748,10 @@
               "description": "Grants /dev/kvm when present. The opening process must run as container root.",
               "type": "boolean"
             },
+            "opticalDrives": {
+              "description": "Grants optical drives and their SCSI generic nodes, including ones plugged in later.",
+              "type": "boolean"
+            },
             "plugins": {
               "type": "array",
               "items": { "$ref": "#/$defs/PluginId" }
@@ -6773,6 +6777,7 @@
             "userspaceFilesystems",
             "virtualNetworking",
             "hardwareVirtualization",
+            "opticalDrives",
             "plugins",
             "satisfies"
           ],
@@ -9947,6 +9952,10 @@
               "description": "Grants /dev/kvm when present. The opening process must run as container root.",
               "type": "boolean"
             },
+            "opticalDrives": {
+              "description": "Grants optical drives and their SCSI generic nodes, including ones plugged in later.",
+              "type": "boolean"
+            },
             "plugins": {
               "type": "array",
               "items": { "$ref": "#/$defs/PluginId" }
@@ -9972,6 +9981,7 @@
             "userspaceFilesystems",
             "virtualNetworking",
             "hardwareVirtualization",
+            "opticalDrives",
             "plugins",
             "satisfies"
           ],

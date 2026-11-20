@@ -898,6 +898,7 @@ fn check_matching_info_short() {
             userspace_filesystems: false,
             virtual_networking: false,
             hardware_virtualization: false,
+            optical_drives: false,
             plugins: BTreeSet::new(),
             satisfies: BTreeSet::new(),
         },
